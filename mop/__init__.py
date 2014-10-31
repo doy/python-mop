@@ -227,6 +227,12 @@ def bootstrap():
         name="get_value", body=get_value
     ))
 
+    def set_value(self, instance, new_value):
+        instance.slots[self.get_name()] = new_value
+    Attribute.add_method(Method.new(
+        name="set_value", body=set_value
+    ))
+
     # here's the better implementation
     # note that we can't replace the implementation of the methods implemented
     # by the previous gen_reader because that would end up recursive
