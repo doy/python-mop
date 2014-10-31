@@ -265,6 +265,13 @@ def bootstrap():
         name="base_object_class", body=lambda self: Object
     ))
 
+    def finalize(self):
+        for method in self.get_all_methods().values():
+            python_install_method(self, method.get_name(), method)
+    Class.add_method(Method.new(
+        name="finalize", body=finalize
+    ))
+
     def isa(self, other):
         mro = self.metaclass.get_mro()
         return other in mro
@@ -292,9 +299,7 @@ def bootstrap():
         python_install_method(Attribute, method.get_name(), method)
 
     def add_method(self, method):
-        name = method.get_name()
-        self.get_local_methods()[name] = method
-        python_install_method(self, name, method)
+        self.get_local_methods()[method.get_name()] = method
     Class.add_method(Method.new(
         name="add_method", body=add_method
     ))
