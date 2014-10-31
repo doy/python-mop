@@ -79,6 +79,10 @@ def bootstrap():
     Method    = bootstrap_create_class('Method', Object)
     Attribute = bootstrap_create_class('Attribute', Object)
 
+    # this add_method implementation is temporary, since it touches the slots
+    # directly and fiddles with method.__class__ and such - once the full mop
+    # is complete, we won't need to do those things (and they might even be the
+    # wrong things to do), so we will replace it at the end
     def add_method(self, method):
         name = method.slots["name"]
         self.slots["methods"][name] = method
@@ -121,10 +125,12 @@ def bootstrap():
     def gen_reader(name):
         return lambda self: self.slots[name]
 
+    # get_mro needs get_superclass
     Class.add_method(bootstrap_create_method(
         "get_superclass", gen_reader("superclass")
     ))
 
+    # get_all_attributes requires get_mro
     def get_mro(self):
         mro = [ self ]
         parent = self.get_superclass()
@@ -135,10 +141,12 @@ def bootstrap():
         "get_mro", get_mro
     ))
 
+    # get_all_attributes requires get_local_attributes
     Class.add_method(bootstrap_create_method(
         "get_local_attributes", gen_reader("attributes")
     ))
 
+    # create_instance requires get_all_attributes
     def get_all_attributes(self):
         attributes = {}
         for c in reversed(self.get_mro()):
@@ -148,6 +156,7 @@ def bootstrap():
         "get_all_attributes", get_all_attributes
     ))
 
+    # new requires create_instance
     def create_instance(self, kwargs):
         slots = {}
         for attr_name in self.get_all_attributes():
