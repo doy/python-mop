@@ -35,42 +35,40 @@ def python_install_method(c, name, method):
         lambda self, *args, **kwargs: method.execute(self, args, kwargs)
     )
 
-# and finally, bootstrap helpers to create hardcoded structures during the
-# bootstrap (which we will inflate into real structures at the end)
-def bootstrap_create_class(name, superclass):
-    c = BasicInstance(
-        globals().get("Class"),
-        {
-            "name": name,
-            "superclass": superclass,
-            "methods": {},
-            "attributes": {},
-        },
-    )
-    # need to make sure we call this explicitly with the class name during the
-    # bootstrap, since we won't have get_name() yet
-    python_class_for(c, name)
-    return c
-
-def bootstrap_create_method(name, body):
-    return BasicInstance(
-        globals().get("Method"),
-        {
-            "name": name,
-            "body": body,
-        }
-    )
-
-def bootstrap_create_attribute(name):
-    return BasicInstance(
-        globals().get("Attribute"),
-        {
-            "name": name,
-        }
-    )
-
 def bootstrap():
     # Phase 1: construct the core classes
+
+    def bootstrap_create_class(name, superclass):
+        c = BasicInstance(
+            globals().get("Class"),
+            {
+                "name": name,
+                "superclass": superclass,
+                "methods": {},
+                "attributes": {},
+            },
+        )
+        # need to make sure we call this explicitly with the class name during
+        # the bootstrap, since we won't have get_name() yet
+        python_class_for(c, name)
+        return c
+
+    def bootstrap_create_method(name, body):
+        return BasicInstance(
+            globals().get("Method"),
+            {
+                "name": name,
+                "body": body,
+            }
+        )
+
+    def bootstrap_create_attribute(name):
+        return BasicInstance(
+            globals().get("Attribute"),
+            {
+                "name": name,
+            }
+        )
 
     global Class, Object, Method, Attribute
 
