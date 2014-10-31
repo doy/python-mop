@@ -62,11 +62,12 @@ def bootstrap():
             }
         )
 
-    def bootstrap_create_attribute(name):
+    def bootstrap_create_attribute(name, default):
         return BasicInstance(
             globals().get("Attribute"),
             {
                 "name": name,
+                "default": default,
             }
         )
 
@@ -154,12 +155,31 @@ def bootstrap():
         "get_all_attributes", get_all_attributes
     ))
 
+    # get_default_for_instance requires get_default
+    Attribute.add_method(bootstrap_create_method(
+        "get_default", gen_reader("default")
+    ))
+
+    # create_instance requires get_default_for_instance
+    def get_default_for_instance(self):
+        default = self.get_default()
+        if callable(default):
+            default = default()
+        return default
+    Attribute.add_method(bootstrap_create_method(
+        "get_default_for_instance", get_default_for_instance
+    ))
+
     # new requires create_instance
     def create_instance(self, kwargs):
         slots = {}
-        for attr_name in self.get_all_attributes():
+        attrs = self.get_all_attributes()
+        for attr_name in attrs:
+            attr = attrs[attr_name]
             if attr_name in kwargs.keys():
                 slots[attr_name] = kwargs[attr_name]
+            else:
+                slots[attr_name] = attr.get_default_for_instance()
         instance = BasicInstance(self, slots)
         instance.__class__ = python_class_for(self)
         return instance
@@ -185,9 +205,13 @@ def bootstrap():
         "add_attribute", add_attribute
     ))
 
-    attr_name = bootstrap_create_attribute("name")
+    attr_name = bootstrap_create_attribute("name", None)
     attr_name.__class__ = python_class_for(Attribute)
     Attribute.add_attribute(attr_name)
+
+    attr_default = bootstrap_create_attribute("default", None)
+    attr_default.__class__ = python_class_for(Attribute)
+    Attribute.add_attribute(attr_default)
 
     # and now object creation works! add the method attributes now to allow
     # creating method objects
@@ -205,8 +229,8 @@ def bootstrap():
 
     Class.add_attribute(Attribute.new(name="name"))
     Class.add_attribute(Attribute.new(name="superclass"))
-    Class.add_attribute(Attribute.new(name="attributes"))
-    Class.add_attribute(Attribute.new(name="methods"))
+    Class.add_attribute(Attribute.new(name="attributes", default=lambda: {}))
+    Class.add_attribute(Attribute.new(name="methods", default=lambda: {}))
 
     Class.add_method(Method.new(
         name="get_name", body=gen_reader("name")
