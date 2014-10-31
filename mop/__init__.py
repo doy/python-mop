@@ -212,7 +212,7 @@ def bootstrap():
         python_install_method(Attribute, method.get_name(), method)
 
     def add_method(self, method):
-        self.slots["methods"][method.get_name()] = method
+        self.get_local_methods()[method.get_name()] = method
     Class.add_method(Method.new(name="add_method", body=add_method))
 
 bootstrap()
