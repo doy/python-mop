@@ -47,6 +47,8 @@ def bootstrap_create_class(name, superclass):
             "attributes": {},
         },
     )
+    # need to make sure we call this explicitly with the class name during the
+    # bootstrap, since we won't have get_name() yet
     python_class_for(c, name)
     return c
 
@@ -119,7 +121,9 @@ def bootstrap():
     def gen_reader(name):
         return lambda self: self.slots[name]
 
-    Class.add_method(bootstrap_create_method("get_superclass", gen_reader("superclass")))
+    Class.add_method(bootstrap_create_method(
+        "get_superclass", gen_reader("superclass")
+    ))
 
     def get_mro(self):
         mro = [ self ]
@@ -127,16 +131,22 @@ def bootstrap():
         if parent:
             mro.extend(parent.get_mro())
         return mro
-    Class.add_method(bootstrap_create_method("get_mro", get_mro))
+    Class.add_method(bootstrap_create_method(
+        "get_mro", get_mro
+    ))
 
-    Class.add_method(bootstrap_create_method("get_local_attributes", gen_reader("attributes")))
+    Class.add_method(bootstrap_create_method(
+        "get_local_attributes", gen_reader("attributes")
+    ))
 
     def get_all_attributes(self):
         attributes = {}
         for c in reversed(self.get_mro()):
             attributes.update(c.get_local_attributes())
         return attributes
-    Class.add_method(bootstrap_create_method("get_all_attributes", get_all_attributes))
+    Class.add_method(bootstrap_create_method(
+        "get_all_attributes", get_all_attributes
+    ))
 
     def create_instance(self, kwargs):
         slots = {}
@@ -146,61 +156,90 @@ def bootstrap():
         instance = BasicInstance(self, slots)
         instance.__class__ = python_class_for(self)
         return instance
-    Class.add_method(bootstrap_create_method("create_instance", create_instance))
+    Class.add_method(bootstrap_create_method(
+        "create_instance", create_instance
+    ))
 
     def new(self, **kwargs):
         return self.create_instance(kwargs)
-    Class.add_method(bootstrap_create_method('new', new))
+    Class.add_method(bootstrap_create_method(
+        "new", new
+    ))
 
     # Phase 5: Object construction works, just need attributes to construct with
 
-    Attribute.add_method(bootstrap_create_method("get_name", gen_reader("name")))
+    Attribute.add_method(bootstrap_create_method(
+        "get_name", gen_reader("name")
+    ))
 
     def add_attribute(self, attr):
         self.get_local_attributes()[attr.get_name()] = attr
-    Class.add_method(bootstrap_create_method("add_attribute", add_attribute))
+    Class.add_method(bootstrap_create_method(
+        "add_attribute", add_attribute
+    ))
 
     attr_name = bootstrap_create_attribute("name")
     attr_name.__class__ = python_class_for(Attribute)
     Attribute.add_attribute(attr_name)
 
-    # and now object creation works!
+    # and now object creation works! add the method attributes now to allow
+    # creating method objects
     Method.add_attribute(Attribute.new(name="name"))
     Method.add_attribute(Attribute.new(name="body"))
 
     # Phase 6: now we can populate the rest of the mop
 
-    Class.add_method(Method.new(name="attribute_class", body=lambda self: Attribute))
-    Class.add_method(Method.new(name="method_class", body=lambda self: Method))
-    Class.add_method(Method.new(name="base_object_class", body=lambda self: Object))
-
-    Class.add_method(Method.new(name="get_name", body=gen_reader("name")))
-
-    Class.add_method(Method.new(name="get_local_methods", body=gen_reader("methods")))
-
-    def get_all_methods(self):
-        methods = {}
-        for c in reversed(self.get_mro()):
-            methods.update(c.get_local_methods())
-        return methods
-    Class.add_method(Method.new(name="get_all_methods", body=get_all_methods))
-
-    Method.add_method(Method.new(name="get_name", body=gen_reader("name")))
-    Method.add_method(Method.new(name="get_body", body=gen_reader("body")))
+    Method.add_method(Method.new(
+        name="get_name", body=gen_reader("name")
+    ))
+    Method.add_method(Method.new(
+        name="get_body", body=gen_reader("body")
+    ))
 
     Class.add_attribute(Attribute.new(name="name"))
     Class.add_attribute(Attribute.new(name="superclass"))
     Class.add_attribute(Attribute.new(name="attributes"))
     Class.add_attribute(Attribute.new(name="methods"))
 
+    Class.add_method(Method.new(
+        name="get_name", body=gen_reader("name")
+    ))
+
+    Class.add_method(Method.new(
+        name="get_local_methods", body=gen_reader("methods")
+    ))
+
+    def get_all_methods(self):
+        methods = {}
+        for c in reversed(self.get_mro()):
+            methods.update(c.get_local_methods())
+        return methods
+    Class.add_method(Method.new(
+        name="get_all_methods", body=get_all_methods
+    ))
+
+    Class.add_method(Method.new(
+        name="attribute_class", body=lambda self: Attribute
+    ))
+    Class.add_method(Method.new(
+        name="method_class", body=lambda self: Method
+    ))
+    Class.add_method(Method.new(
+        name="base_object_class", body=lambda self: Object
+    ))
+
     def isa(self, other):
         mro = self.metaclass.get_mro()
         return other in mro
-    Object.add_method(Method.new(name="isa", body=isa))
+    Object.add_method(Method.new(
+        name="isa", body=isa
+    ))
 
     def can(self, method_name):
         return self.metaclass.get_all_methods().get(method_name)
-    Object.add_method(Method.new(name="can", body=can))
+    Object.add_method(Method.new(
+        name="can", body=can
+    ))
 
     # Phase 7: now we have to clean up after ourselves
 
@@ -216,7 +255,11 @@ def bootstrap():
         python_install_method(Attribute, method.get_name(), method)
 
     def add_method(self, method):
-        self.get_local_methods()[method.get_name()] = method
-    Class.add_method(Method.new(name="add_method", body=add_method))
+        name = method.get_name()
+        self.get_local_methods()[name] = method
+        python_install_method(self, name, method)
+    Class.add_method(Method.new(
+        name="add_method", body=add_method
+    ))
 
 bootstrap()
