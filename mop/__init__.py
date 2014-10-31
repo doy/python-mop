@@ -1,5 +1,8 @@
 # Phase 0: absolute basics that we must start with
 
+# things that must be provided by the underlying system: a place to store the
+# mop itself, a data structure for instance data (with no associated behavior),
+# and a way to run a chunk of code, given an invocant and argument list
 Class     = None
 Object    = None
 Method    = None
@@ -10,13 +13,21 @@ class BasicInstance(object):
         self.metaclass = metaclass
         self.slots = slots
 
+def execute_method(method, invocant, args, kwargs):
+    return method.slots["body"](invocant, *args, **kwargs)
+
+# shim layer to interface with python - in a real system, this wouldn't be
+# necessary, but this allows us to pass python-level method calls through to
+# our mop infrastructure
 UNDERLYING_CLASSES = {}
-def bootstrap_underlying_class_for(c):
+def python_class_for(c):
     name = c.slots["name"]
     if name not in UNDERLYING_CLASSES.keys():
         UNDERLYING_CLASSES[name] = type(name, (object,), {})
     return UNDERLYING_CLASSES[name]
 
+# and finally, bootstrap helpers to create hardcoded structures during the
+# bootstrap (which we will inflate into real structures at the end)
 def bootstrap_create_class(name, superclass):
     return BasicInstance(
         globals().get("Class"),
@@ -45,15 +56,6 @@ def bootstrap_create_attribute(name):
         }
     )
 
-def bootstrap_class_add_method(self, method):
-    name = method.slots["name"]
-    self.slots["methods"][name] = method
-    method.__class__ = bootstrap_underlying_class_for(Method)
-    setattr(bootstrap_underlying_class_for(self), name, lambda self, *args, **kwargs: method.execute(self, args, kwargs))
-
-def bootstrap_method_execute(method, invocant, args, kwargs):
-    return method.slots["body"](invocant, *args, **kwargs)
-
 def bootstrap():
     # Phase 1: construct the core classes
 
@@ -64,11 +66,16 @@ def bootstrap():
     Method    = bootstrap_create_class('Method', Object)
     Attribute = bootstrap_create_class('Attribute', Object)
 
+    def add_method(self, method):
+        name = method.slots["name"]
+        self.slots["methods"][name] = method
+        method.__class__ = python_class_for(Method)
+        setattr(python_class_for(self), name, lambda self, *args, **kwargs: method.execute(self, args, kwargs))
     Class.slots["methods"]["add_method"] = bootstrap_create_method(
-        "add_method", bootstrap_class_add_method
+        "add_method", add_method
     )
     Method.slots["methods"]["execute"] = bootstrap_create_method(
-        "execute", bootstrap_method_execute
+        "execute", execute_method
     )
 
     # Phase 2: tie the knot
@@ -78,21 +85,21 @@ def bootstrap():
 
     # Phase 3: associate the core classes with their underlying method table
 
-    Class.__class__     = bootstrap_underlying_class_for(Class)
-    Object.__class__    = bootstrap_underlying_class_for(Class)
-    Method.__class__    = bootstrap_underlying_class_for(Class)
-    Attribute.__class__ = bootstrap_underlying_class_for(Class)
+    Class.__class__     = python_class_for(Class)
+    Object.__class__    = python_class_for(Class)
+    Method.__class__    = python_class_for(Class)
+    Attribute.__class__ = python_class_for(Class)
 
     m1 = Class.slots["methods"]["add_method"]
     m1.metaclass = Method
-    m1.__class__ = bootstrap_underlying_class_for(Method)
-    setattr(bootstrap_underlying_class_for(Class), "add_method", lambda self, *args, **kwargs: m1.execute(self, args, kwargs))
+    m1.__class__ = python_class_for(Method)
+    setattr(python_class_for(Class), "add_method", lambda self, *args, **kwargs: m1.execute(self, args, kwargs))
 
     # note: not using method.execute here, since this is the recursion base case
     m2 = Method.slots["methods"]["execute"]
     m2.metaclass = Method
-    m2.__class__ = bootstrap_underlying_class_for(Method)
-    setattr(bootstrap_underlying_class_for(Method), "execute", bootstrap_method_execute)
+    m2.__class__ = python_class_for(Method)
+    setattr(python_class_for(Method), "execute", execute_method)
 
     # Phase 4: manually assemble enough scaffolding to allow object construction
 
@@ -124,7 +131,7 @@ def bootstrap():
             if attr_name in kwargs.keys():
                 slots[attr_name] = kwargs[attr_name]
         instance = BasicInstance(self, slots)
-        instance.__class__ = bootstrap_underlying_class_for(self)
+        instance.__class__ = python_class_for(self)
         return instance
     Class.add_method(bootstrap_create_method("create_instance", create_instance))
 
@@ -141,7 +148,7 @@ def bootstrap():
     Class.add_method(bootstrap_create_method("add_attribute", add_attribute))
 
     attr_name = bootstrap_create_attribute("name")
-    attr_name.__class__ = bootstrap_underlying_class_for(Attribute)
+    attr_name.__class__ = python_class_for(Attribute)
     Attribute.add_attribute(attr_name)
 
     # and now object creation works!
@@ -186,14 +193,14 @@ def bootstrap():
 
     for c in [ Class, Object, Method, Attribute ]:
         for method in c.get_local_methods().values():
-            method.__class__ = bootstrap_underlying_class_for(Method)
+            method.__class__ = python_class_for(Method)
         for attribute in c.get_local_attributes().values():
-            attribute.__class__ = bootstrap_underlying_class_for(Attribute)
+            attribute.__class__ = python_class_for(Attribute)
 
     for method in Object.get_local_methods().values():
-        setattr(bootstrap_underlying_class_for(Class), method.get_name(), lambda self, *args, **kwargs: method.execute(self, args, kwargs))
-        setattr(bootstrap_underlying_class_for(Method), method.get_name(), lambda self, *args, **kwargs: method.execute(self, args, kwargs))
-        setattr(bootstrap_underlying_class_for(Attribute), method.get_name(), lambda self, *args, **kwargs: method.execute(self, args, kwargs))
+        setattr(python_class_for(Class), method.get_name(), lambda self, *args, **kwargs: method.execute(self, args, kwargs))
+        setattr(python_class_for(Method), method.get_name(), lambda self, *args, **kwargs: method.execute(self, args, kwargs))
+        setattr(python_class_for(Attribute), method.get_name(), lambda self, *args, **kwargs: method.execute(self, args, kwargs))
 
     def add_method(self, method):
         self.slots["methods"][method.get_name()] = method
