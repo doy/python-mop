@@ -20,11 +20,13 @@ def execute_method(method, invocant, args, kwargs):
 # necessary, but this allows us to pass python-level method calls through to
 # our mop infrastructure
 UNDERLYING_CLASSES = {}
-def python_class_for(c):
-    name = c.slots["name"]
-    if name not in UNDERLYING_CLASSES.keys():
-        UNDERLYING_CLASSES[name] = type(name, (object,), {})
-    return UNDERLYING_CLASSES[name]
+def python_class_for(c, name=None):
+    key = c.__hash__()
+    if key not in UNDERLYING_CLASSES.keys():
+        if name is None:
+            name = c.get_name()
+        UNDERLYING_CLASSES[key] = type(name, (object,), {})
+    return UNDERLYING_CLASSES[key]
 
 def python_install_method(c, name, method):
     setattr(
@@ -36,7 +38,7 @@ def python_install_method(c, name, method):
 # and finally, bootstrap helpers to create hardcoded structures during the
 # bootstrap (which we will inflate into real structures at the end)
 def bootstrap_create_class(name, superclass):
-    return BasicInstance(
+    c = BasicInstance(
         globals().get("Class"),
         {
             "name": name,
@@ -45,6 +47,8 @@ def bootstrap_create_class(name, superclass):
             "attributes": {},
         },
     )
+    python_class_for(c, name)
+    return c
 
 def bootstrap_create_method(name, body):
     return BasicInstance(
