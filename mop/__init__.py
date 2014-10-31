@@ -227,6 +227,12 @@ def bootstrap():
         name="get_body", body=gen_reader("body")
     ))
 
+    def get_value(self, instance):
+        return instance.slots[self.get_name()]
+    Attribute.add_method(Method.new(
+        name="get_value", body=get_value
+    ))
+
     Class.add_attribute(Attribute.new(name="name"))
     Class.add_attribute(Attribute.new(name="superclass"))
     Class.add_attribute(Attribute.new(name="attributes", default=lambda: {}))
