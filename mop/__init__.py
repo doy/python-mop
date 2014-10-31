@@ -121,6 +121,7 @@ def bootstrap():
 
     # Phase 4: manually assemble enough scaffolding to allow object construction
 
+    # temporary, we'll have a better version later
     def gen_reader(name):
         return lambda self: self.slots[name]
 
@@ -220,17 +221,23 @@ def bootstrap():
 
     # Phase 6: now we can populate the rest of the mop
 
+    def get_value(self, instance):
+        return instance.slots[self.get_name()]
+    Attribute.add_method(Method.new(
+        name="get_value", body=get_value
+    ))
+
+    # here's the better implementation
+    # note that we can't replace the implementation of the methods implemented
+    # by the previous gen_reader because that would end up recursive
+    def gen_reader(name):
+        return lambda self: self.metaclass.get_all_attributes()[name].get_value(self)
+
     Method.add_method(Method.new(
         name="get_name", body=gen_reader("name")
     ))
     Method.add_method(Method.new(
         name="get_body", body=gen_reader("body")
-    ))
-
-    def get_value(self, instance):
-        return instance.slots[self.get_name()]
-    Attribute.add_method(Method.new(
-        name="get_value", body=get_value
     ))
 
     Class.add_attribute(Attribute.new(name="name"))
