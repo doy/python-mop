@@ -85,3 +85,8 @@ class MopTest(unittest.TestCase):
 
         assert not point.can("z")
         assert point3d.can("z")
+
+        assert point.isa(Point)
+        assert point3d.isa(Point)
+        assert not point.isa(Point3D)
+        assert point3d.isa(Point3D)
