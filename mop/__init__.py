@@ -26,6 +26,13 @@ def python_class_for(c):
         UNDERLYING_CLASSES[name] = type(name, (object,), {})
     return UNDERLYING_CLASSES[name]
 
+def python_install_method(c, name, method):
+    setattr(
+        python_class_for(c),
+        name,
+        lambda self, *args, **kwargs: method.execute(self, args, kwargs)
+    )
+
 # and finally, bootstrap helpers to create hardcoded structures during the
 # bootstrap (which we will inflate into real structures at the end)
 def bootstrap_create_class(name, superclass):
@@ -70,7 +77,7 @@ def bootstrap():
         name = method.slots["name"]
         self.slots["methods"][name] = method
         method.__class__ = python_class_for(Method)
-        setattr(python_class_for(self), name, lambda self, *args, **kwargs: method.execute(self, args, kwargs))
+        python_install_method(self, name, method)
     Class.slots["methods"]["add_method"] = bootstrap_create_method(
         "add_method", add_method
     )
@@ -93,9 +100,11 @@ def bootstrap():
     m1 = Class.slots["methods"]["add_method"]
     m1.metaclass = Method
     m1.__class__ = python_class_for(Method)
-    setattr(python_class_for(Class), "add_method", lambda self, *args, **kwargs: m1.execute(self, args, kwargs))
+    python_install_method(Class, "add_method", m1)
 
-    # note: not using method.execute here, since this is the recursion base case
+    # note: not using python_install_method here, since that installs a method
+    # which calls method.execute, and this is where we have the recursion base
+    # case
     m2 = Method.slots["methods"]["execute"]
     m2.metaclass = Method
     m2.__class__ = python_class_for(Method)
@@ -198,9 +207,9 @@ def bootstrap():
             attribute.__class__ = python_class_for(Attribute)
 
     for method in Object.get_local_methods().values():
-        setattr(python_class_for(Class), method.get_name(), lambda self, *args, **kwargs: method.execute(self, args, kwargs))
-        setattr(python_class_for(Method), method.get_name(), lambda self, *args, **kwargs: method.execute(self, args, kwargs))
-        setattr(python_class_for(Attribute), method.get_name(), lambda self, *args, **kwargs: method.execute(self, args, kwargs))
+        python_install_method(Class, method.get_name(), method)
+        python_install_method(Method, method.get_name(), method)
+        python_install_method(Attribute, method.get_name(), method)
 
     def add_method(self, method):
         self.slots["methods"][method.get_name()] = method
