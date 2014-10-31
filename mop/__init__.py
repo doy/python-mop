@@ -106,17 +106,17 @@ def bootstrap():
     Method.__class__    = python_class_for(Class)
     Attribute.__class__ = python_class_for(Class)
 
-    m1 = Class.slots["methods"]["add_method"]
-    m1.metaclass = Method
-    m1.__class__ = python_class_for(Method)
-    python_install_method(Class, "add_method", m1)
+    method_add_method = Class.slots["methods"]["add_method"]
+    method_add_method.metaclass = Method
+    method_add_method.__class__ = python_class_for(Method)
+    python_install_method(Class, "add_method", method_add_method)
 
     # note: not using python_install_method here, since that installs a method
     # which calls method.execute, and this is where we have the recursion base
     # case
-    m2 = Method.slots["methods"]["execute"]
-    m2.metaclass = Method
-    m2.__class__ = python_class_for(Method)
+    method_execute = Method.slots["methods"]["execute"]
+    method_execute.metaclass = Method
+    method_execute.__class__ = python_class_for(Method)
     setattr(python_class_for(Method), "execute", execute_method)
 
     # Phase 4: manually assemble enough scaffolding to allow object construction
