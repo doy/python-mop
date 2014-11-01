@@ -17,11 +17,10 @@ class MopTest(unittest.TestCase):
         assert mop.Object in mop.Object.get_mro()
         assert mop.Class not in mop.Object.get_mro()
 
-        # XXX no idea what's going on here
-        # assert mop.Class.isa(mop.Object)
-        # assert mop.Class.isa(mop.Class)
-        # assert mop.Object.isa(mop.Object)
-        # assert not mop.Object.isa(mop.Class)
+        assert mop.Class.isa(mop.Object)
+        assert mop.Class.isa(mop.Class)
+        assert mop.Object.isa(mop.Object)
+        assert mop.Object.isa(mop.Class)
 
         assert mop.Method.metaclass is mop.Class
         assert mop.Attribute.metaclass is mop.Class
