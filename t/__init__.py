@@ -1,8 +1,6 @@
 import json
 import mop
 
-CLASS_REGISTRY = {}
-
 class InMemoryDatabase(object):
     def __init__(self):
         self.store = {}
