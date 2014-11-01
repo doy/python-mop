@@ -9,9 +9,9 @@ from . import InMemoryDatabase
 # obscure the implementation and make it not as easy to follow (we would have
 # to manage call stacks ourselves), and so we just do this instead for now
 def call_method_at_class(c, method_name, invocant, *args, **kwargs):
-    return c.all_methods()[method_name].slots["body"](
-        invocant, *args, **kwargs
-    )
+    method = c.all_methods()[method_name]
+    attr = method.metaclass.all_attributes()["body"]
+    return attr.value(method)(invocant, *args, **kwargs)
 
 class OverridesTest(unittest.TestCase):
     def test_accessor_generation(self):
