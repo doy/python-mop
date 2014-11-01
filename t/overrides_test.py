@@ -107,14 +107,14 @@ class OverridesTest(unittest.TestCase):
             body=lambda self: self.metaclass.all_attributes()["db"].value(self)
         ))
         def value(self, instance):
-            key = str(instance.__hash__()) + ":" + self.name()
+            key = str(hash(instance)) + ":" + self.name()
             return self.db().lookup(key)
         DatabaseAttribute.add_method(DatabaseAttribute.method_class().new(
             name="value",
             body=value,
         ))
         def set_value(self, instance, new_value):
-            key = str(instance.__hash__()) + ":" + self.name()
+            key = str(hash(instance)) + ":" + self.name()
             self.db().insert(key, new_value)
         DatabaseAttribute.add_method(DatabaseAttribute.method_class().new(
             name="set_value",

@@ -21,7 +21,7 @@ def execute_method(body, invocant, args, kwargs):
 # our mop infrastructure
 UNDERLYING_CLASSES = {}
 def python_class_for(c, name=None):
-    key = c.__hash__()
+    key = hash(c)
     if key not in UNDERLYING_CLASSES.keys():
         if name is None:
             name = c.name()
