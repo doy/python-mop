@@ -98,9 +98,8 @@ def bootstrap():
     method_add_method = bootstrap_create_method(
         "add_method", add_method
     )
-    method_add_method.metaclass = Method
-    method_add_method.__class__ = python_class_for(Method)
     Class.slots["methods"]["add_method"] = method_add_method
+    method_add_method.__class__ = python_class_for(Method)
     python_install_method(Class, "add_method", method_add_method)
 
     # same here
@@ -109,9 +108,8 @@ def bootstrap():
     method_execute = bootstrap_create_method(
         "execute", execute
     )
-    method_execute.metaclass = Method
-    method_execute.__class__ = python_class_for(Method)
     Method.slots["methods"]["execute"] = method_execute
+    method_execute.__class__ = python_class_for(Method)
     # note: not using python_install_method here, since that installs a method
     # which calls method.execute, and this is where we have the recursion base
     # case
