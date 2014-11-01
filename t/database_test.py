@@ -24,23 +24,23 @@ class DatabaseTest(unittest.TestCase):
             "bar": '{"data":[1,2,"b"],"type":"plain"}',
         }
 
-        Point = mop.Class.new(
+        Point = mop.Class(
             name="Point",
             superclass=mop.Class.base_object_class(),
         )
-        Point.add_attribute(Point.attribute_class().new(name="x"))
-        Point.add_attribute(Point.attribute_class().new(name="y"))
-        Point.add_method(Point.method_class().new(
+        Point.add_attribute(Point.attribute_class()(name="x"))
+        Point.add_attribute(Point.attribute_class()(name="y"))
+        Point.add_method(Point.method_class()(
             name="x",
             body=lambda self: self.metaclass.all_attributes()["x"].value(self)
         ))
-        Point.add_method(Point.method_class().new(
+        Point.add_method(Point.method_class()(
             name="y",
             body=lambda self: self.metaclass.all_attributes()["y"].value(self)
         ))
         Point.finalize()
 
-        point = Point.new(x=10, y=23)
+        point = Point(x=10, y=23)
         assert point.x() == 10
         assert point.y() == 23
 

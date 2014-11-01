@@ -206,6 +206,11 @@ def bootstrap():
         "new", new
     ))
 
+    # not strictly necessary, but makes constructors nicer
+    Class.add_method(bootstrap_create_method(
+        "__call__", new
+    ))
+
     # Phase 4: Object construction works, just need attributes to construct with
 
     def add_attribute(self, attr):
@@ -224,14 +229,14 @@ def bootstrap():
 
     # and now object creation works! add the method attributes now to allow
     # creating method objects
-    Method.add_attribute(Attribute.new(name="name"))
-    Method.add_attribute(Attribute.new(name="body"))
+    Method.add_attribute(Attribute(name="name"))
+    Method.add_attribute(Attribute(name="body"))
 
     # Phase 5: now we can populate the rest of the mop
 
     def value(self, instance):
         return instance.slots[self.name()]
-    Attribute.add_method(Method.new(
+    Attribute.add_method(Method(
         name="value", body=value
     ))
 
@@ -240,23 +245,23 @@ def bootstrap():
     def gen_reader(name):
         return lambda self: self.metaclass.all_attributes()[name].value(self)
 
-    Method.add_method(Method.new(
+    Method.add_method(Method(
         name="name", body=gen_reader("name")
     ))
-    Method.add_method(Method.new(
+    Method.add_method(Method(
         name="body", body=gen_reader("body")
     ))
 
-    Class.add_attribute(Attribute.new(name="name"))
-    Class.add_attribute(Attribute.new(name="superclass"))
-    Class.add_attribute(Attribute.new(name="attributes", default=lambda: {}))
-    Class.add_attribute(Attribute.new(name="methods", default=lambda: {}))
+    Class.add_attribute(Attribute(name="name"))
+    Class.add_attribute(Attribute(name="superclass"))
+    Class.add_attribute(Attribute(name="attributes", default=lambda: {}))
+    Class.add_attribute(Attribute(name="methods", default=lambda: {}))
 
-    Class.add_method(Method.new(
+    Class.add_method(Method(
         name="name", body=gen_reader("name")
     ))
 
-    Class.add_method(Method.new(
+    Class.add_method(Method(
         name="local_methods", body=gen_reader("methods")
     ))
 
@@ -265,37 +270,37 @@ def bootstrap():
         for c in reversed(self.mro()):
             methods.update(c.local_methods())
         return methods
-    Class.add_method(Method.new(
+    Class.add_method(Method(
         name="all_methods", body=all_methods
     ))
 
-    Class.add_method(Method.new(
+    Class.add_method(Method(
         name="attribute_class", body=lambda self: Attribute
     ))
-    Class.add_method(Method.new(
+    Class.add_method(Method(
         name="method_class", body=lambda self: Method
     ))
-    Class.add_method(Method.new(
+    Class.add_method(Method(
         name="base_object_class", body=lambda self: Object
     ))
 
     def finalize(self):
         for method in self.all_methods().values():
             python_install_method(self, method.name(), method)
-    Class.add_method(Method.new(
+    Class.add_method(Method(
         name="finalize", body=finalize
     ))
 
     def isa(self, other):
         mro = self.metaclass.mro()
         return other in mro
-    Object.add_method(Method.new(
+    Object.add_method(Method(
         name="isa", body=isa
     ))
 
     def can(self, method_name):
         return self.metaclass.all_methods().get(method_name)
-    Object.add_method(Method.new(
+    Object.add_method(Method(
         name="can", body=can
     ))
 
@@ -303,7 +308,7 @@ def bootstrap():
 
     def add_method(self, method):
         self.local_methods()[method.name()] = method
-    Class.add_method(Method.new(
+    Class.add_method(Method(
         name="add_method", body=add_method
     ))
 
@@ -323,22 +328,22 @@ def bootstrap():
     def execute(self, invocant, args, kwargs):
         body = self.metaclass.all_attributes()["body"].value(self)
         return execute_method(body, invocant, args, kwargs)
-    Method.add_method(Method.new(
+    Method.add_method(Method(
         name="execute", body=execute
     ))
 
     # do the same thing with accessor methods that we installed with our
     # temporary version of gen_reader
-    Class.add_method(Method.new(
+    Class.add_method(Method(
         name="superclass", body=gen_reader("superclass")
     ))
-    Class.add_method(Method.new(
+    Class.add_method(Method(
         name="local_attributes", body=gen_reader("attributes")
     ))
-    Attribute.add_method(Method.new(
+    Attribute.add_method(Method(
         name="default", body=gen_reader("default")
     ))
-    Attribute.add_method(Method.new(
+    Attribute.add_method(Method(
         name="name", body=gen_reader("name")
     ))
 

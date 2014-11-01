@@ -43,23 +43,23 @@ class MopTest(unittest.TestCase):
         assert mop.Attribute.mro() == [ mop.Attribute, mop.Object ]
 
     def test_class_creation(self):
-        Point = mop.Class.new(
+        Point = mop.Class(
             name="Point",
             superclass=mop.Class.base_object_class()
         )
 
-        Point.add_attribute(Point.attribute_class().new(name="x", default=0))
-        Point.add_attribute(Point.attribute_class().new(name="y", default=0))
+        Point.add_attribute(Point.attribute_class()(name="x", default=0))
+        Point.add_attribute(Point.attribute_class()(name="y", default=0))
 
-        Point.add_method(Point.method_class().new(
+        Point.add_method(Point.method_class()(
             name="x",
             body=lambda self: self.metaclass.all_attributes()["x"].value(self)
         ))
-        Point.add_method(Point.method_class().new(
+        Point.add_method(Point.method_class()(
             name="y",
             body=lambda self: self.metaclass.all_attributes()["y"].value(self)
         ))
-        Point.add_method(Point.method_class().new(
+        Point.add_method(Point.method_class()(
             name="set_x",
             body=lambda self, new_value: self.metaclass.all_attributes()["x"].set_value(self, new_value)
         ))
@@ -70,7 +70,7 @@ class MopTest(unittest.TestCase):
         assert Point.superclass() is mop.Object
         assert Point.mro() == [ Point, mop.Object ]
 
-        point = Point.new(x=1, y=2)
+        point = Point(x=1, y=2)
         assert point.isa(Point)
         assert point.metaclass is Point
         assert point.x() == 1
@@ -78,19 +78,19 @@ class MopTest(unittest.TestCase):
         point.set_x(10)
         assert point.x() == 10
 
-        point2 = Point.new(x=3, y=4)
+        point2 = Point(x=3, y=4)
         assert point is not point2
         assert point.x() == 10
         assert point.y() == 2
         assert point2.x() == 3
         assert point2.y() == 4
 
-        Point3D = Point.metaclass.new(
+        Point3D = Point.metaclass(
             name="Point3D",
             superclass=Point,
         )
-        Point3D.add_attribute(Point3D.attribute_class().new(name="z", default=0))
-        Point3D.add_method(Point3D.method_class().new(
+        Point3D.add_attribute(Point3D.attribute_class()(name="z", default=0))
+        Point3D.add_method(Point3D.method_class()(
             name="z",
             body=lambda self: self.metaclass.all_attributes()["z"].value(self)
         ))
@@ -101,7 +101,7 @@ class MopTest(unittest.TestCase):
         assert Point3D.superclass() is Point
         assert Point3D.mro() == [ Point3D, Point, mop.Object ]
 
-        point3d = Point3D.new(x=3, y=4, z=5)
+        point3d = Point3D(x=3, y=4, z=5)
         assert point3d.isa(Point3D)
         assert point3d.isa(Point)
         assert point3d.isa(mop.Object)
@@ -117,9 +117,9 @@ class MopTest(unittest.TestCase):
         assert not point.isa(Point3D)
         assert point3d.isa(Point3D)
 
-        point_default = Point.new()
+        point_default = Point()
         assert point_default.x() == 0
         assert point_default.y() == 0
-        point3d_default = Point3D.new()
+        point3d_default = Point3D()
         assert point3d_default.x() == 0
         assert point3d_default.y() == 0
