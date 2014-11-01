@@ -171,18 +171,29 @@ def bootstrap():
         "get_default_for_instance", get_default_for_instance
     ))
 
+    # set_value requires get_name
+    Attribute.add_method(bootstrap_create_method(
+        "get_name", gen_reader("name")
+    ))
+
+    # create_instance requires set_value
+    def set_value(self, instance, new_value):
+        instance.slots[self.get_name()] = new_value
+    Attribute.add_method(bootstrap_create_method(
+        name="set_value", body=set_value
+    ))
+
     # new requires create_instance
     def create_instance(self, kwargs):
-        slots = {}
+        instance = BasicInstance(self, {})
+        instance.__class__ = python_class_for(self)
         attrs = self.get_all_attributes()
         for attr_name in attrs:
             attr = attrs[attr_name]
             if attr_name in kwargs.keys():
-                slots[attr_name] = kwargs[attr_name]
+                attr.set_value(instance, kwargs[attr_name])
             else:
-                slots[attr_name] = attr.get_default_for_instance()
-        instance = BasicInstance(self, slots)
-        instance.__class__ = python_class_for(self)
+                attr.set_value(instance, attr.get_default_for_instance())
         return instance
     Class.add_method(bootstrap_create_method(
         "create_instance", create_instance
@@ -195,10 +206,6 @@ def bootstrap():
     ))
 
     # Phase 5: Object construction works, just need attributes to construct with
-
-    Attribute.add_method(bootstrap_create_method(
-        "get_name", gen_reader("name")
-    ))
 
     def add_attribute(self, attr):
         self.get_local_attributes()[attr.get_name()] = attr
@@ -225,12 +232,6 @@ def bootstrap():
         return instance.slots[self.get_name()]
     Attribute.add_method(Method.new(
         name="get_value", body=get_value
-    ))
-
-    def set_value(self, instance, new_value):
-        instance.slots[self.get_name()] = new_value
-    Attribute.add_method(Method.new(
-        name="set_value", body=set_value
     ))
 
     # here's the better implementation
