@@ -86,6 +86,13 @@ def bootstrap():
     Method.__class__    = python_class_for(Class)
     Attribute.__class__ = python_class_for(Class)
 
+    # Phase 2: tie the knot
+
+    Class.metaclass = Class
+    Class.slots["superclass"] = Object
+
+    # Phase 3: manually assemble enough scaffolding to allow object construction
+
     # this add_method implementation is temporary, since it touches the slots
     # directly and fiddles with method.__class__ and such - once the full mop
     # is complete, we won't need to do those things (and they might even be the
@@ -114,13 +121,6 @@ def bootstrap():
     # which calls method.execute, and this is where we have the recursion base
     # case
     setattr(python_class_for(Method), "execute", method_execute.slots["body"])
-
-    # Phase 2: tie the knot
-
-    Class.metaclass = Class
-    Class.slots["superclass"] = Object
-
-    # Phase 3: manually assemble enough scaffolding to allow object construction
 
     # temporary, we'll have a better version later
     def gen_reader(name):
