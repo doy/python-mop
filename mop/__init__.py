@@ -13,8 +13,8 @@ class BasicInstance(object):
         self.metaclass = metaclass
         self.slots = slots
 
-def execute_method(method, invocant, args, kwargs):
-    return method.slots["body"](invocant, *args, **kwargs)
+def execute_method(body, invocant, args, kwargs):
+    return body(invocant, *args, **kwargs)
 
 # shim layer to interface with python - in a real system, this wouldn't be
 # necessary, but this allows us to pass python-level method calls through to
@@ -90,8 +90,11 @@ def bootstrap():
     Class.slots["methods"]["add_method"] = bootstrap_create_method(
         "add_method", add_method
     )
+    # same here
+    def execute(self, invocant, args, kwargs):
+        return execute_method(self.slots["body"], invocant, args, kwargs)
     Method.slots["methods"]["execute"] = bootstrap_create_method(
-        "execute", execute_method
+        "execute", execute
     )
 
     # Phase 2: tie the knot
@@ -117,7 +120,7 @@ def bootstrap():
     method_execute = Method.slots["methods"]["execute"]
     method_execute.metaclass = Method
     method_execute.__class__ = python_class_for(Method)
-    setattr(python_class_for(Method), "execute", execute_method)
+    setattr(python_class_for(Method), "execute", method_execute.slots["body"])
 
     # Phase 4: manually assemble enough scaffolding to allow object construction
 
@@ -301,21 +304,30 @@ def bootstrap():
 
     # Phase 7: now we have to clean up after ourselves
 
-    for c in [ Class, Object, Method, Attribute ]:
-        for method in c.get_local_methods().values():
-            method.__class__ = python_class_for(Method)
-        for attribute in c.get_local_attributes().values():
-            attribute.__class__ = python_class_for(Attribute)
-
-    for method in Object.get_local_methods().values():
-        python_install_method(Class, method.get_name(), method)
-        python_install_method(Method, method.get_name(), method)
-        python_install_method(Attribute, method.get_name(), method)
-
     def add_method(self, method):
         self.get_local_methods()[method.get_name()] = method
     Class.add_method(Method.new(
         name="add_method", body=add_method
+    ))
+
+    Class.finalize()
+    Object.finalize()
+    Attribute.finalize()
+
+    # we can't call Method.finalize(), since that would overwrite our base
+    # implementation of Method.execute and lead to infinite recursion
+    for method in Object.get_local_methods().values():
+        python_install_method(Method, method.get_name(), method)
+
+    # we add the better version of Method.execute to the internal method map,
+    # but we don't actually install it. this way, all method subclasses will
+    # use this implementation, but the base Method class will not (which is
+    # safe because we know exactly how the base Method class is implemented)
+    def execute(self, invocant, args, kwargs):
+        body = self.metaclass.get_all_attributes()["body"].get_value(self)
+        return execute_method(body, invocant, args, kwargs)
+    Method.add_method(Method.new(
+        name="execute", body=execute
     ))
 
 bootstrap()
