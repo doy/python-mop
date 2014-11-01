@@ -200,13 +200,11 @@ def bootstrap():
         "create_instance", create_instance
     ))
 
+    # using __call__ in order to make the syntax look like normal python
+    # constructors, but this is really just a normal static method, it's still
+    # not anything python-specific
     def new(self, **kwargs):
         return self.create_instance(kwargs)
-    Class.add_method(bootstrap_create_method(
-        "new", new
-    ))
-
-    # not strictly necessary, but makes constructors nicer
     Class.add_method(bootstrap_create_method(
         "__call__", new
     ))
