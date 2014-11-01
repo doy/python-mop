@@ -19,28 +19,28 @@ class MopTest(unittest.TestCase):
         assert mop.Object.isa(mop.Object)
         assert mop.Object.isa(mop.Class)
 
-        assert mop.Class.get_all_methods()["add_method"].isa(mop.Object)
-        assert mop.Class.get_all_methods()["add_method"].isa(mop.Method)
-        assert not mop.Class.get_all_methods()["add_method"].isa(mop.Class)
+        assert mop.Class.all_methods()["add_method"].isa(mop.Object)
+        assert mop.Class.all_methods()["add_method"].isa(mop.Method)
+        assert not mop.Class.all_methods()["add_method"].isa(mop.Class)
 
-        assert mop.Class.get_all_attributes()["superclass"].isa(mop.Object)
-        assert mop.Class.get_all_attributes()["superclass"].isa(mop.Attribute)
-        assert not mop.Class.get_all_attributes()["superclass"].isa(mop.Class)
+        assert mop.Class.all_attributes()["superclass"].isa(mop.Object)
+        assert mop.Class.all_attributes()["superclass"].isa(mop.Attribute)
+        assert not mop.Class.all_attributes()["superclass"].isa(mop.Class)
 
-        assert mop.Class.get_name() == "Class"
-        assert mop.Object.get_name() == "Object"
-        assert mop.Method.get_name() == "Method"
-        assert mop.Attribute.get_name() == "Attribute"
+        assert mop.Class.name() == "Class"
+        assert mop.Object.name() == "Object"
+        assert mop.Method.name() == "Method"
+        assert mop.Attribute.name() == "Attribute"
 
-        assert mop.Class.get_superclass() is mop.Object
-        assert mop.Object.get_superclass() is None
-        assert mop.Method.get_superclass() is mop.Object
-        assert mop.Attribute.get_superclass() is mop.Object
+        assert mop.Class.superclass() is mop.Object
+        assert mop.Object.superclass() is None
+        assert mop.Method.superclass() is mop.Object
+        assert mop.Attribute.superclass() is mop.Object
 
-        assert mop.Class.get_mro() == [ mop.Class, mop.Object ]
-        assert mop.Object.get_mro() == [ mop.Object ]
-        assert mop.Method.get_mro() == [ mop.Method, mop.Object ]
-        assert mop.Attribute.get_mro() == [ mop.Attribute, mop.Object ]
+        assert mop.Class.mro() == [ mop.Class, mop.Object ]
+        assert mop.Object.mro() == [ mop.Object ]
+        assert mop.Method.mro() == [ mop.Method, mop.Object ]
+        assert mop.Attribute.mro() == [ mop.Attribute, mop.Object ]
 
     def test_class_creation(self):
         Point = mop.Class.new(
@@ -53,22 +53,22 @@ class MopTest(unittest.TestCase):
 
         Point.add_method(Point.method_class().new(
             name="x",
-            body=lambda self: self.metaclass.get_all_attributes()["x"].get_value(self)
+            body=lambda self: self.metaclass.all_attributes()["x"].value(self)
         ))
         Point.add_method(Point.method_class().new(
             name="y",
-            body=lambda self: self.metaclass.get_all_attributes()["y"].get_value(self)
+            body=lambda self: self.metaclass.all_attributes()["y"].value(self)
         ))
         Point.add_method(Point.method_class().new(
             name="set_x",
-            body=lambda self, new_value: self.metaclass.get_all_attributes()["x"].set_value(self, new_value)
+            body=lambda self, new_value: self.metaclass.all_attributes()["x"].set_value(self, new_value)
         ))
         Point.finalize()
 
         assert Point.metaclass is mop.Class
         assert Point.isa(mop.Object)
-        assert Point.get_superclass() is mop.Object
-        assert Point.get_mro() == [ Point, mop.Object ]
+        assert Point.superclass() is mop.Object
+        assert Point.mro() == [ Point, mop.Object ]
 
         point = Point.new(x=1, y=2)
         assert point.isa(Point)
@@ -92,14 +92,14 @@ class MopTest(unittest.TestCase):
         Point3D.add_attribute(Point3D.attribute_class().new(name="z", default=0))
         Point3D.add_method(Point3D.method_class().new(
             name="z",
-            body=lambda self: self.metaclass.get_all_attributes()["z"].get_value(self)
+            body=lambda self: self.metaclass.all_attributes()["z"].value(self)
         ))
         Point3D.finalize()
 
         assert Point3D.metaclass is mop.Class
         assert Point3D.isa(mop.Object)
-        assert Point3D.get_superclass() is Point
-        assert Point3D.get_mro() == [ Point3D, Point, mop.Object ]
+        assert Point3D.superclass() is Point
+        assert Point3D.mro() == [ Point3D, Point, mop.Object ]
 
         point3d = Point3D.new(x=3, y=4, z=5)
         assert point3d.isa(Point3D)

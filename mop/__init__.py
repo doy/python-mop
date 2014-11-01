@@ -24,7 +24,7 @@ def python_class_for(c, name=None):
     key = c.__hash__()
     if key not in UNDERLYING_CLASSES.keys():
         if name is None:
-            name = c.get_name()
+            name = c.name()
         UNDERLYING_CLASSES[key] = type(name, (object,), {})
     return UNDERLYING_CLASSES[key]
 
@@ -49,7 +49,7 @@ def bootstrap():
             },
         )
         # need to make sure we call this explicitly with the class name during
-        # the bootstrap, since we won't have get_name() yet
+        # the bootstrap, since we won't have name() yet
         python_class_for(c, name)
         return c
 
@@ -128,60 +128,60 @@ def bootstrap():
     def gen_reader(name):
         return lambda self: self.slots[name]
 
-    # get_mro needs get_superclass
+    # mro needs superclass
     Class.add_method(bootstrap_create_method(
-        "get_superclass", gen_reader("superclass")
+        "superclass", gen_reader("superclass")
     ))
 
-    # get_all_attributes requires get_mro
-    def get_mro(self):
+    # all_attributes requires mro
+    def mro(self):
         mro = [ self ]
-        parent = self.get_superclass()
+        parent = self.superclass()
         if parent:
-            mro.extend(parent.get_mro())
+            mro.extend(parent.mro())
         return mro
     Class.add_method(bootstrap_create_method(
-        "get_mro", get_mro
+        "mro", mro
     ))
 
-    # get_all_attributes requires get_local_attributes
+    # all_attributes requires local_attributes
     Class.add_method(bootstrap_create_method(
-        "get_local_attributes", gen_reader("attributes")
+        "local_attributes", gen_reader("attributes")
     ))
 
-    # create_instance requires get_all_attributes
-    def get_all_attributes(self):
+    # create_instance requires all_attributes
+    def all_attributes(self):
         attributes = {}
-        for c in reversed(self.get_mro()):
-            attributes.update(c.get_local_attributes())
+        for c in reversed(self.mro()):
+            attributes.update(c.local_attributes())
         return attributes
     Class.add_method(bootstrap_create_method(
-        "get_all_attributes", get_all_attributes
+        "all_attributes", all_attributes
     ))
 
-    # get_default_for_instance requires get_default
+    # default_for_instance requires default
     Attribute.add_method(bootstrap_create_method(
-        "get_default", gen_reader("default")
+        "default", gen_reader("default")
     ))
 
-    # create_instance requires get_default_for_instance
-    def get_default_for_instance(self):
-        default = self.get_default()
+    # create_instance requires default_for_instance
+    def default_for_instance(self):
+        default = self.default()
         if callable(default):
             default = default()
         return default
     Attribute.add_method(bootstrap_create_method(
-        "get_default_for_instance", get_default_for_instance
+        "default_for_instance", default_for_instance
     ))
 
-    # set_value requires get_name
+    # set_value requires name
     Attribute.add_method(bootstrap_create_method(
-        "get_name", gen_reader("name")
+        "name", gen_reader("name")
     ))
 
     # create_instance requires set_value
     def set_value(self, instance, new_value):
-        instance.slots[self.get_name()] = new_value
+        instance.slots[self.name()] = new_value
     Attribute.add_method(bootstrap_create_method(
         name="set_value", body=set_value
     ))
@@ -190,13 +190,13 @@ def bootstrap():
     def create_instance(self, kwargs):
         instance = BasicInstance(self, {})
         instance.__class__ = python_class_for(self)
-        attrs = self.get_all_attributes()
+        attrs = self.all_attributes()
         for attr_name in attrs:
             attr = attrs[attr_name]
             if attr_name in kwargs.keys():
                 attr.set_value(instance, kwargs[attr_name])
             else:
-                attr.set_value(instance, attr.get_default_for_instance())
+                attr.set_value(instance, attr.default_for_instance())
         return instance
     Class.add_method(bootstrap_create_method(
         "create_instance", create_instance
@@ -211,7 +211,7 @@ def bootstrap():
     # Phase 5: Object construction works, just need attributes to construct with
 
     def add_attribute(self, attr):
-        self.get_local_attributes()[attr.get_name()] = attr
+        self.local_attributes()[attr.name()] = attr
     Class.add_method(bootstrap_create_method(
         "add_attribute", add_attribute
     ))
@@ -231,23 +231,23 @@ def bootstrap():
 
     # Phase 6: now we can populate the rest of the mop
 
-    def get_value(self, instance):
-        return instance.slots[self.get_name()]
+    def value(self, instance):
+        return instance.slots[self.name()]
     Attribute.add_method(Method.new(
-        name="get_value", body=get_value
+        name="value", body=value
     ))
 
     # here's the better implementation
     # note that we can't replace the implementation of the methods implemented
     # by the previous gen_reader because that would end up recursive
     def gen_reader(name):
-        return lambda self: self.metaclass.get_all_attributes()[name].get_value(self)
+        return lambda self: self.metaclass.all_attributes()[name].value(self)
 
     Method.add_method(Method.new(
-        name="get_name", body=gen_reader("name")
+        name="name", body=gen_reader("name")
     ))
     Method.add_method(Method.new(
-        name="get_body", body=gen_reader("body")
+        name="body", body=gen_reader("body")
     ))
 
     Class.add_attribute(Attribute.new(name="name"))
@@ -256,20 +256,20 @@ def bootstrap():
     Class.add_attribute(Attribute.new(name="methods", default=lambda: {}))
 
     Class.add_method(Method.new(
-        name="get_name", body=gen_reader("name")
+        name="name", body=gen_reader("name")
     ))
 
     Class.add_method(Method.new(
-        name="get_local_methods", body=gen_reader("methods")
+        name="local_methods", body=gen_reader("methods")
     ))
 
-    def get_all_methods(self):
+    def all_methods(self):
         methods = {}
-        for c in reversed(self.get_mro()):
-            methods.update(c.get_local_methods())
+        for c in reversed(self.mro()):
+            methods.update(c.local_methods())
         return methods
     Class.add_method(Method.new(
-        name="get_all_methods", body=get_all_methods
+        name="all_methods", body=all_methods
     ))
 
     Class.add_method(Method.new(
@@ -283,21 +283,21 @@ def bootstrap():
     ))
 
     def finalize(self):
-        for method in self.get_all_methods().values():
-            python_install_method(self, method.get_name(), method)
+        for method in self.all_methods().values():
+            python_install_method(self, method.name(), method)
     Class.add_method(Method.new(
         name="finalize", body=finalize
     ))
 
     def isa(self, other):
-        mro = self.metaclass.get_mro()
+        mro = self.metaclass.mro()
         return other in mro
     Object.add_method(Method.new(
         name="isa", body=isa
     ))
 
     def can(self, method_name):
-        return self.metaclass.get_all_methods().get(method_name)
+        return self.metaclass.all_methods().get(method_name)
     Object.add_method(Method.new(
         name="can", body=can
     ))
@@ -305,7 +305,7 @@ def bootstrap():
     # Phase 7: now we have to clean up after ourselves
 
     def add_method(self, method):
-        self.get_local_methods()[method.get_name()] = method
+        self.local_methods()[method.name()] = method
     Class.add_method(Method.new(
         name="add_method", body=add_method
     ))
@@ -316,15 +316,15 @@ def bootstrap():
 
     # we can't call Method.finalize(), since that would overwrite our base
     # implementation of Method.execute and lead to infinite recursion
-    for method in Object.get_local_methods().values():
-        python_install_method(Method, method.get_name(), method)
+    for method in Object.local_methods().values():
+        python_install_method(Method, method.name(), method)
 
     # we add the better version of Method.execute to the internal method map,
     # but we don't actually install it. this way, all method subclasses will
     # use this implementation, but the base Method class will not (which is
     # safe because we know exactly how the base Method class is implemented)
     def execute(self, invocant, args, kwargs):
-        body = self.metaclass.get_all_attributes()["body"].get_value(self)
+        body = self.metaclass.all_attributes()["body"].value(self)
         return execute_method(body, invocant, args, kwargs)
     Method.add_method(Method.new(
         name="execute", body=execute
@@ -333,16 +333,16 @@ def bootstrap():
     # do the same thing with accessor methods that we installed with our
     # temporary version of gen_reader
     Class.add_method(Method.new(
-        name="get_superclass", body=gen_reader("superclass")
+        name="superclass", body=gen_reader("superclass")
     ))
     Class.add_method(Method.new(
-        name="get_local_attributes", body=gen_reader("attributes")
+        name="local_attributes", body=gen_reader("attributes")
     ))
     Attribute.add_method(Method.new(
-        name="get_default", body=gen_reader("default")
+        name="default", body=gen_reader("default")
     ))
     Attribute.add_method(Method.new(
-        name="get_name", body=gen_reader("name")
+        name="name", body=gen_reader("name")
     ))
 
 bootstrap()

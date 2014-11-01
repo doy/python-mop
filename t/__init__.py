@@ -9,10 +9,10 @@ class InMemoryDatabase(object):
         self.class_registry = {}
 
     def register_class(self, c):
-        self.class_registry[c.get_name()] = c
+        self.class_registry[c.name()] = c
 
     def insert(self, name, obj):
-        data = self._get_repr(obj)
+        data = self._repr(obj)
         self.store[name] = json.dumps(
             data,
             separators=(',', ':'),
@@ -32,7 +32,7 @@ class InMemoryDatabase(object):
         else:
             raise Exception("object not in database")
 
-    def _get_repr(self, obj):
+    def _repr(self, obj):
         if type(obj) == type([]):
             return { "type": "plain", "data": obj }
         if type(obj) == type({}):
@@ -49,7 +49,7 @@ class InMemoryDatabase(object):
             self.register_class(obj.metaclass)
             return {
                 "type": "object",
-                "class": obj.metaclass.get_name(),
+                "class": obj.metaclass.name(),
                 "data": obj.slots,
             }
         raise Exception("unknown object type")

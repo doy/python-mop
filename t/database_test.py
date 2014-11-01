@@ -32,11 +32,11 @@ class DatabaseTest(unittest.TestCase):
         Point.add_attribute(Point.attribute_class().new(name="y"))
         Point.add_method(Point.method_class().new(
             name="x",
-            body=lambda self: self.metaclass.get_all_attributes()["x"].get_value(self)
+            body=lambda self: self.metaclass.all_attributes()["x"].value(self)
         ))
         Point.add_method(Point.method_class().new(
             name="y",
-            body=lambda self: self.metaclass.get_all_attributes()["y"].get_value(self)
+            body=lambda self: self.metaclass.all_attributes()["y"].value(self)
         ))
         Point.finalize()
 

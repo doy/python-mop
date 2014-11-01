@@ -9,7 +9,7 @@ from . import InMemoryDatabase
 # obscure the implementation and make it not as easy to follow (we would have
 # to manage call stacks ourselves), and so we just do this instead for now
 def call_method_at_class(c, method_name, invocant, *args, **kwargs):
-    return c.get_all_methods()[method_name].slots["body"](
+    return c.all_methods()[method_name].slots["body"](
         invocant, *args, **kwargs
     )
 
@@ -20,11 +20,11 @@ class OverridesTest(unittest.TestCase):
             superclass=mop.Class,
         )
         def add_attribute(self, attr):
-            name = attr.get_name()
+            name = attr.name()
             call_method_at_class(mop.Class, "add_attribute", self, attr)
             self.add_method(self.method_class().new(
                 name=name,
-                body=lambda self: self.metaclass.get_all_attributes()[name].get_value(self),
+                body=lambda self: self.metaclass.all_attributes()[name].value(self),
             ))
         AccessorsMetaclass.add_method(AccessorsMetaclass.metaclass.method_class().new(
             name="add_attribute",
@@ -53,7 +53,7 @@ class OverridesTest(unittest.TestCase):
         )
 
         def execute(self, invocant, args, kwargs):
-            methods_called.append(self.get_name())
+            methods_called.append(self.name())
             return call_method_at_class(mop.Method, "execute", self, invocant, args, kwargs)
         TraceMethod.add_method(TraceMethod.metaclass.method_class().new(
             name="execute",
@@ -79,11 +79,11 @@ class OverridesTest(unittest.TestCase):
         Point.add_attribute(Point.attribute_class().new(name="y", default=0))
         Point.add_method(Point.method_class().new(
             name="x",
-            body=lambda self: self.metaclass.get_all_attributes()["x"].get_value(self)
+            body=lambda self: self.metaclass.all_attributes()["x"].value(self)
         ))
         Point.add_method(Point.method_class().new(
             name="y",
-            body=lambda self: self.metaclass.get_all_attributes()["y"].get_value(self)
+            body=lambda self: self.metaclass.all_attributes()["y"].value(self)
         ))
         Point.finalize()
 
@@ -104,17 +104,17 @@ class OverridesTest(unittest.TestCase):
         ))
         DatabaseAttribute.add_method(DatabaseAttribute.method_class().new(
             name="db",
-            body=lambda self: self.metaclass.get_all_attributes()["db"].get_value(self)
+            body=lambda self: self.metaclass.all_attributes()["db"].value(self)
         ))
-        def get_value(self, instance):
-            key = str(instance.__hash__()) + ":" + self.get_name()
+        def value(self, instance):
+            key = str(instance.__hash__()) + ":" + self.name()
             return self.db().lookup(key)
         DatabaseAttribute.add_method(DatabaseAttribute.method_class().new(
-            name="get_value",
-            body=get_value,
+            name="value",
+            body=value,
         ))
         def set_value(self, instance, new_value):
-            key = str(instance.__hash__()) + ":" + self.get_name()
+            key = str(instance.__hash__()) + ":" + self.name()
             self.db().insert(key, new_value)
         DatabaseAttribute.add_method(DatabaseAttribute.method_class().new(
             name="set_value",
@@ -131,10 +131,10 @@ class OverridesTest(unittest.TestCase):
         ))
         DatabaseBackedClass.add_method(DatabaseBackedClass.method_class().new(
             name="db",
-            body=lambda self: self.metaclass.get_all_attributes()["db"].get_value(self)
+            body=lambda self: self.metaclass.all_attributes()["db"].value(self)
         ))
         def add_attribute(self, attr):
-            attr.metaclass.get_all_attributes()["db"].set_value(attr, self.db())
+            attr.metaclass.all_attributes()["db"].set_value(attr, self.db())
             call_method_at_class(mop.Class, "add_attribute", self, attr)
         DatabaseBackedClass.add_method(DatabaseBackedClass.method_class().new(
             name="add_attribute",
@@ -155,15 +155,15 @@ class OverridesTest(unittest.TestCase):
         Point.add_attribute(Point.attribute_class().new(name="y", default=0))
         Point.add_method(Point.method_class().new(
             name="x",
-            body=lambda self: self.metaclass.get_all_attributes()["x"].get_value(self)
+            body=lambda self: self.metaclass.all_attributes()["x"].value(self)
         ))
         Point.add_method(Point.method_class().new(
             name="y",
-            body=lambda self: self.metaclass.get_all_attributes()["y"].get_value(self)
+            body=lambda self: self.metaclass.all_attributes()["y"].value(self)
         ))
         Point.add_method(Point.method_class().new(
             name="set_x",
-            body=lambda self, new_value: self.metaclass.get_all_attributes()["x"].set_value(self, new_value)
+            body=lambda self, new_value: self.metaclass.all_attributes()["x"].set_value(self, new_value)
         ))
         Point.finalize()
 
