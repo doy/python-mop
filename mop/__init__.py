@@ -39,7 +39,7 @@ def bootstrap():
     # Phase 1: construct the core classes
 
     def bootstrap_create_class(name, superclass):
-        c = BasicInstance(
+        return BasicInstance(
             globals().get("Class"),
             {
                 "name": name,
@@ -48,10 +48,6 @@ def bootstrap():
                 "attributes": {},
             },
         )
-        # need to make sure we call this explicitly with the class name during
-        # the bootstrap, since we won't have name() yet
-        python_class_for(c, name)
-        return c
 
     def bootstrap_create_method(name, body):
         return BasicInstance(
@@ -78,6 +74,18 @@ def bootstrap():
     Method    = bootstrap_create_class('Method', Object)
     Attribute = bootstrap_create_class('Attribute', Object)
 
+    # need to make sure we call this explicitly with the class name during the
+    # bootstrap, since we won't have name() yet
+    python_class_for(Class,     'Class')
+    python_class_for(Object,    'Object')
+    python_class_for(Method,    'Method')
+    python_class_for(Attribute, 'Attribute')
+
+    Class.__class__     = python_class_for(Class)
+    Object.__class__    = python_class_for(Class)
+    Method.__class__    = python_class_for(Class)
+    Attribute.__class__ = python_class_for(Class)
+
     # this add_method implementation is temporary, since it touches the slots
     # directly and fiddles with method.__class__ and such - once the full mop
     # is complete, we won't need to do those things (and they might even be the
@@ -87,42 +95,34 @@ def bootstrap():
         self.slots["methods"][name] = method
         method.__class__ = python_class_for(Method)
         python_install_method(self, name, method)
-    Class.slots["methods"]["add_method"] = bootstrap_create_method(
+    method_add_method = bootstrap_create_method(
         "add_method", add_method
     )
+    method_add_method.metaclass = Method
+    method_add_method.__class__ = python_class_for(Method)
+    Class.slots["methods"]["add_method"] = method_add_method
+    python_install_method(Class, "add_method", method_add_method)
+
     # same here
     def execute(self, invocant, args, kwargs):
         return execute_method(self.slots["body"], invocant, args, kwargs)
-    Method.slots["methods"]["execute"] = bootstrap_create_method(
+    method_execute = bootstrap_create_method(
         "execute", execute
     )
+    method_execute.metaclass = Method
+    method_execute.__class__ = python_class_for(Method)
+    Method.slots["methods"]["execute"] = method_execute
+    # note: not using python_install_method here, since that installs a method
+    # which calls method.execute, and this is where we have the recursion base
+    # case
+    setattr(python_class_for(Method), "execute", method_execute.slots["body"])
 
     # Phase 2: tie the knot
 
     Class.metaclass = Class
     Class.slots["superclass"] = Object
 
-    # Phase 3: associate the core classes with their underlying method table
-
-    Class.__class__     = python_class_for(Class)
-    Object.__class__    = python_class_for(Class)
-    Method.__class__    = python_class_for(Class)
-    Attribute.__class__ = python_class_for(Class)
-
-    method_add_method = Class.slots["methods"]["add_method"]
-    method_add_method.metaclass = Method
-    method_add_method.__class__ = python_class_for(Method)
-    python_install_method(Class, "add_method", method_add_method)
-
-    # note: not using python_install_method here, since that installs a method
-    # which calls method.execute, and this is where we have the recursion base
-    # case
-    method_execute = Method.slots["methods"]["execute"]
-    method_execute.metaclass = Method
-    method_execute.__class__ = python_class_for(Method)
-    setattr(python_class_for(Method), "execute", method_execute.slots["body"])
-
-    # Phase 4: manually assemble enough scaffolding to allow object construction
+    # Phase 3: manually assemble enough scaffolding to allow object construction
 
     # temporary, we'll have a better version later
     def gen_reader(name):
@@ -208,7 +208,7 @@ def bootstrap():
         "new", new
     ))
 
-    # Phase 5: Object construction works, just need attributes to construct with
+    # Phase 4: Object construction works, just need attributes to construct with
 
     def add_attribute(self, attr):
         self.local_attributes()[attr.name()] = attr
@@ -229,7 +229,7 @@ def bootstrap():
     Method.add_attribute(Attribute.new(name="name"))
     Method.add_attribute(Attribute.new(name="body"))
 
-    # Phase 6: now we can populate the rest of the mop
+    # Phase 5: now we can populate the rest of the mop
 
     def value(self, instance):
         return instance.slots[self.name()]
@@ -302,7 +302,7 @@ def bootstrap():
         name="can", body=can
     ))
 
-    # Phase 7: now we have to clean up after ourselves
+    # Phase 6: now we have to clean up after ourselves
 
     def add_method(self, method):
         self.local_methods()[method.name()] = method
