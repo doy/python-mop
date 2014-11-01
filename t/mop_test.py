@@ -9,24 +9,23 @@ class MopTest(unittest.TestCase):
         assert mop.Method is not None
         assert mop.Attribute is not None
 
-        assert mop.Object.metaclass is mop.Class
         assert mop.Class.metaclass is mop.Class
-
-        assert mop.Object in mop.Class.get_mro()
-        assert mop.Class in mop.Class.get_mro()
-        assert mop.Object in mop.Object.get_mro()
-        assert mop.Class not in mop.Object.get_mro()
+        assert mop.Object.metaclass is mop.Class
+        assert mop.Method.metaclass is mop.Class
+        assert mop.Attribute.metaclass is mop.Class
 
         assert mop.Class.isa(mop.Object)
         assert mop.Class.isa(mop.Class)
         assert mop.Object.isa(mop.Object)
         assert mop.Object.isa(mop.Class)
 
-        assert mop.Method.metaclass is mop.Class
-        assert mop.Attribute.metaclass is mop.Class
+        assert mop.Class.get_all_methods()["add_method"].isa(mop.Object)
+        assert mop.Class.get_all_methods()["add_method"].isa(mop.Method)
+        assert not mop.Class.get_all_methods()["add_method"].isa(mop.Class)
 
-        assert mop.Object in mop.Method.get_mro()
-        assert mop.Object in mop.Attribute.get_mro()
+        assert mop.Class.get_all_attributes()["superclass"].isa(mop.Object)
+        assert mop.Class.get_all_attributes()["superclass"].isa(mop.Attribute)
+        assert not mop.Class.get_all_attributes()["superclass"].isa(mop.Class)
 
         assert mop.Class.get_name() == "Class"
         assert mop.Object.get_name() == "Object"
