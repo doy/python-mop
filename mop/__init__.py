@@ -330,4 +330,19 @@ def bootstrap():
         name="execute", body=execute
     ))
 
+    # do the same thing with accessor methods that we installed with our
+    # temporary version of gen_reader
+    Class.add_method(Method.new(
+        name="get_superclass", body=gen_reader("superclass")
+    ))
+    Class.add_method(Method.new(
+        name="get_local_attributes", body=gen_reader("attributes")
+    ))
+    Attribute.add_method(Method.new(
+        name="get_default", body=gen_reader("default")
+    ))
+    Attribute.add_method(Method.new(
+        name="get_name", body=gen_reader("name")
+    ))
+
 bootstrap()
